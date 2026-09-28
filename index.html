@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Zoneamento Porto do Rio</title>
+  <title>Zoneamento do Porto do Rio de Janeiro</title>
+  <meta name="author" content="Maria Eduarda Almeida de Sousa">
   <script>
     /* Aplica o tema salvo antes da pintura, evitando piscar */
     try { if (JSON.parse(localStorage.getItem('geoportal-rj:tema')) === 'escuro') document.documentElement.dataset.tema = 'escuro'; } catch (e) {}
@@ -15,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-  <link rel="stylesheet" href="assets/css/geoportal.css?v=6">
+  <link rel="stylesheet" href="assets/css/geoportal.css?v=9">
 </head>
 <body>
 <a class="pular" href="#arvore">Pular para as camadas</a>
@@ -128,8 +129,10 @@
     </section>
 
     <footer class="painel-rodape">
-      <span>Referência: SIRGAS 2000</span>
-      <span id="rodapeContagem"></span>
+      <div class="rodape-linha">
+        <span>Referência: SIRGAS 2000</span>
+        <span id="rodapeContagem"></span>
+      </div>
     </footer>
   </aside>
 
@@ -222,6 +225,10 @@
       <span id="impData"></span>
     </div>
     <div class="impressao-legenda" id="impLegenda"></div>
+    <div class="impressao-creditos">
+      <span class="imp-orgao">Ministério de Portos e Aeroportos</span>
+      <span class="imp-autoria">Desenvolvido por Maria Eduarda Almeida de Sousa</span>
+    </div>
   </main>
 
   <!-- Painel estatístico de perfis de carga -->
@@ -280,8 +287,8 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
-<script src="assets/js/config.js?v=6"></script>
+<script src="assets/js/config.js?v=8"></script>
 <script src="assets/js/dados.js"></script>
-<script src="assets/js/geoportal.js?v=6"></script>
+<script src="assets/js/geoportal.js?v=9"></script>
 </body>
 </html>

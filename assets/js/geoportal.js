@@ -1316,7 +1316,12 @@
     else map.flyTo([-22.885, -43.2], 13);
   }
 
-  function imprimir() {
+  /* Impressão: o mapa é redimensionado para o quadro fixo da folha A4 e
+     reenquadrado na mesma área vista na tela, antes de abrir o diálogo. */
+  let vistaAntesImpressao = null;
+
+  function prepararImpressao() {
+    if (vistaAntesImpressao) return;
     fecharInfo();
     $('#impTitulo').textContent = CFG.titulo;
     $('#impHorizonte').textContent = horizonteAtual().nome;
@@ -1324,12 +1329,44 @@
     $('#impFiltro').textContent = partes.length ? ` · Filtro: ${partes.join(', ')}` : '';
     $('#impData').textContent = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
     $('#impLegenda').innerHTML = htmlLegenda();
-    const centro = map.getCenter(), zoom = map.getZoom();
-    const reajustar = () => { map.invalidateSize(); map.setView(centro, zoom, { animate: false }); };
-    window.addEventListener('beforeprint', reajustar, { once: true });
-    window.addEventListener('afterprint', () => setTimeout(reajustar, 50), { once: true });
+    vistaAntesImpressao = { centro: map.getCenter(), zoom: map.getZoom(), limites: map.getBounds() };
+    document.body.classList.add('preparando-impressao');
+    map.invalidateSize({ pan: false });
+    map.fitBounds(vistaAntesImpressao.limites, { animate: false });
+  }
+
+  function restaurarAposImpressao() {
+    if (!vistaAntesImpressao) return;
+    const v = vistaAntesImpressao;
+    vistaAntesImpressao = null;
+    document.body.classList.remove('preparando-impressao');
+    map.invalidateSize({ pan: false });
+    map.setView(v.centro, v.zoom, { animate: false });
+  }
+
+  function aguardarMapaBase(limiteMs) {
+    const camadas = [];
+    Object.values(basesLeaflet).forEach((g) => { if (map.hasLayer(g)) g.eachLayer((l) => camadas.push(l)); });
+    const inicio = Date.now();
+    return new Promise((ok) => {
+      (function verificar() {
+        const carregando = camadas.some((l) => l.isLoading && l.isLoading());
+        if (!carregando || Date.now() - inicio > limiteMs) ok(); else setTimeout(verificar, 120);
+      })();
+    });
+  }
+
+  async function imprimir() {
+    prepararImpressao();
+    aviso('Preparando a impressão…', 1800);
+    await new Promise((r) => setTimeout(r, 150));
+    await aguardarMapaBase(4000);
     window.print();
   }
+
+  // Também cobre Ctrl+P (sem passar pelo botão)
+  window.addEventListener('beforeprint', prepararImpressao);
+  window.addEventListener('afterprint', () => setTimeout(restaurarAposImpressao, 50));
 
   function aoUsarFerramenta(e) {
     const b = e.target.closest('button[data-ferr]');
@@ -1638,7 +1675,11 @@
       <p>Sistemas de origem dos arquivos: ${[...crs].map(esc).join(', ') || '—'}. Todos os dados são reprojetados para WGS 84 na exibição;
         a barra inferior mostra também as coordenadas em SIRGAS 2000 / UTM zona 23S (EPSG:31983).</p>
       <h3>Mapas de fundo</h3>
-      <ul>${CFG.basemaps.map((b) => `<li><b>${esc(b.nome)}</b> — ${b.atribuicao}</li>`).join('')}</ul>`;
+      <ul>${CFG.basemaps.map((b) => `<li><b>${esc(b.nome)}</b> — ${b.atribuicao}</li>`).join('')}</ul>
+      <div class="creditos">
+        <h3>Créditos</h3>
+        <p>Geoportal desenvolvido por Maria Eduarda Almeida de Sousa.</p>
+      </div>`;
   }
 
   function aplicarTema(tema, silencioso) {
