@@ -7,6 +7,25 @@
    Todas as simbologias usam linhas sólidas. "contorno" desenha um halo
    sob a linha principal para destacá-la sobre qualquer mapa de fundo.
    ===================================================================== */
+// Cor fixa de cada perfil de carga — a mesma em todas as camadas que têm o campo
+const CORES_PERFIL = {
+  'Contêineres': '#1d4ed8',
+  'Veículos': '#7c3aed',
+  'Passageiros': '#db2777',
+  'Multiuso': '#0891b2',
+  'Granéis Líquidos': '#9a3412',
+  'Granéis Sólidos': '#ca8a04',
+  'Trigo': '#eab308',
+  'Offshore': '#0f766e',
+  'Apoio Logístico Offshore': '#2dd4bf',
+  'Carga Geral e Offshore': '#059669',
+  'Carga Geral': '#16a34a',
+  'Carga Geral e Granel Sólido': '#84cc16',
+  'Produtos Siderúrgicos': '#475569',
+  'Não informado': '#9ca3af'
+};
+const POR_PERFIL = { campo: 'Perfil de Carga', cores: CORES_PERFIL };
+
 window.GEOPORTAL_CONFIG = {
   titulo: 'Zoneamento do Porto do Rio de Janeiro',
   subtitulo: 'Zoneamento, infraestrutura e acessos portuários',
@@ -82,32 +101,24 @@ window.GEOPORTAL_CONFIG = {
       nome: 'Áreas afetas às operações portuárias',
       arquivo: 'Áreas Afetas às Operações Portuárias',
       painel: 'pn-zoneamento', rotulo: ['Nome'],
-      estilo: { cor: '#1e3a8a', espessura: 1.2, opacidadePreenchimento: 0.45 },
-      categorias: {
-        campo: 'Tipo de Instalação',
-        cores: {
-          'Acostagem': '#0284c7',
-          'Armazenagem': '#d97706',
-          'Arrendamento': '#7c3aed',
-          'Terminal de Passageiros': '#db2777',
-          'Área Pública': '#059669',
-          'Instalação de Descarga de Trigo': '#ca8a04'
-        }
-      }
+      estilo: { cor: '#1e3a8a', espessura: 2.5, opacidadePreenchimento: 0.45 },
+      categorias: POR_PERFIL
     },
     {
       id: 'arrendadas', grupo: 'zon', tipo: 'poligono', horizonte: true,
       nome: 'Áreas arrendadas',
       arquivo: 'Áreas Afetas às Operações Portuárias Arrendadas',
       painel: 'pn-zoneamento', rotulo: ['Arrendatário'],
-      estilo: { cor: '#6d28d9', preenchimento: '#8b5cf6', espessura: 2, opacidadePreenchimento: 0.3 }
+      estilo: { cor: '#6d28d9', espessura: 2.5, opacidadePreenchimento: 0.45 },
+      categorias: POR_PERFIL
     },
     {
       id: 'disp_arr', grupo: 'zon', tipo: 'poligono', horizonte: true,
       nome: 'Áreas disponíveis para arrendamento',
       arquivo: 'Áreas Afetas às Operações Portuárias Disponíveis para Arrendamento',
       painel: 'pn-zoneamento', rotulo: ['Nome'],
-      estilo: { cor: '#15803d', preenchimento: '#22c55e', espessura: 2, opacidadePreenchimento: 0.3 }
+      estilo: { cor: '#15803d', espessura: 2.5, opacidadePreenchimento: 0.45 },
+      categorias: POR_PERFIL
     },
     {
       id: 'nao_afetas', grupo: 'zon', tipo: 'poligono', horizonte: true,
@@ -137,7 +148,8 @@ window.GEOPORTAL_CONFIG = {
       nome: 'Acostagem (berços)',
       arquivo: 'Acostagem',
       painel: 'pn-instalacoes', rotulo: ['Identificador do Berço'],
-      estilo: { cor: '#9f1239', preenchimento: '#e11d48', espessura: 1.2, opacidadePreenchimento: 0.7 }
+      estilo: { cor: '#9f1239', espessura: 2.5, opacidadePreenchimento: 0.6 },
+      categorias: POR_PERFIL
     },
     {
       id: 'armazenagem', grupo: 'inst', tipo: 'poligono', horizonte: true,
@@ -158,7 +170,8 @@ window.GEOPORTAL_CONFIG = {
       nome: 'Áreas e instalações alfandegadas',
       arquivo: 'Áreas e Instalações Alfandegadas',
       painel: 'pn-instalacoes', rotulo: ['Legenda'],
-      estilo: { cor: '#334155', espessura: 1.8, padrao: { cor: '#475569', espaco: 6, espessura: 1.2, angulo: -45 } }
+      // Amarelo com halo escuro: contorno visível sobre satélite e sobre o mapa claro
+      estilo: { cor: '#facc15', espessura: 2.5, padrao: { cor: '#facc15', espaco: 6, espessura: 1.5, angulo: -45 }, contorno: { cor: '#1f2937', espessura: 5.5 } }
     },
 
     /* ---------------- Acessos aquaviários ---------------- */

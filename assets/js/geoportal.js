@@ -297,8 +297,16 @@
 
   const valorCategoria = (f, campo) => {
     const v = f.properties[campo];
+    if (campo === EST.campoPerfil) return normPerfil(v); // unifica grafias do perfil de carga
     return v === null || v === undefined || String(v).trim() === '' ? 'Não informado' : String(v).trim();
   };
+
+  // Polígonos com preenchimento: linha da mesma cor do preenchimento, mais espessa e menos transparente
+  const ESPESSURA_MIN_POLIGONO = 2.5;
+  const OPACIDADE_PREENCHIMENTO = 0.45; // preenchimento sólido padrão dos polígonos
+  const OPACIDADE_HACHURA = 0.75;       // preenchimento hachurado (as linhas da hachura são finas)
+  const poligonoPreenchido = (rt) => rt.cfg.tipo !== 'linha' && !rt.cfg.estilo.semPreenchimento &&
+    (rt.cfg.estilo.padrao || rt.cfg.estilo.opacidadePreenchimento !== 0);
 
   function calcularCategorias(rt) {
     const cat = rt.cfg.categorias;
@@ -320,9 +328,11 @@
     const e = rt.cfg.estilo;
     if (rt.cats) {
       const c = rt.cats.get(valorCategoria(f, rt.cfg.categorias.campo)) || '#94a3b8';
-      return { traco: escurecer(c, 0.3), preench: c };
+      return { traco: c, preench: c };
     }
-    return { traco: e.cor, preench: e.preenchimento || e.cor };
+    const preench = e.preenchimento || e.cor;
+    if (poligonoPreenchido(rt)) return { traco: e.padrao ? e.padrao.cor : preench, preench };
+    return { traco: e.cor, preench };
   }
 
   function estiloFeicao(rt, f, realce) {
@@ -337,19 +347,23 @@
       };
     }
     const semPreench = !!e.semPreenchimento;
-    const fo = e.padrao ? 1 : (e.opacidadePreenchimento ?? 0.35);
+    const preenchido = poligonoPreenchido(rt);
+    const fo = e.padrao ? OPACIDADE_HACHURA : (preenchido ? OPACIDADE_PREENCHIMENTO : (e.opacidadePreenchimento ?? 0));
+    const esp = preenchido ? Math.max(e.espessura ?? 1.5, ESPESSURA_MIN_POLIGONO) : (e.espessura ?? 1.5);
     return {
-      color: traco, weight: (e.espessura ?? 1.5) + extra, opacity: op,
+      // Em polígonos o controle de opacidade atua só no preenchimento: o contorno fica sempre opaco
+      color: traco, weight: esp + extra, opacity: 1,
       dashArray: e.tracejado || null, lineJoin: 'round',
       fill: !semPreench,
       fillColor: e.padrao ? `url(#pad-${rt.cfg.id})` : preench,
-      fillOpacity: Math.min(1, (fo + (realce && !e.padrao ? 0.15 : 0))) * op
+      fillOpacity: Math.min(1, fo + (realce && !e.padrao && preenchido ? 0.15 : 0)) * op
     };
   }
 
   function estiloContorno(rt) {
     const c = rt.cfg.estilo.contorno;
-    return { color: c.cor, weight: c.espessura, opacity: rt.opacidade * 0.95, fill: false, lineCap: 'round', lineJoin: 'round' };
+    const opacidade = rt.cfg.tipo === 'linha' ? rt.opacidade * 0.95 : 0.95;
+    return { color: c.cor, weight: c.espessura, opacity: opacidade, fill: false, lineCap: 'round', lineJoin: 'round' };
   }
 
   function criarPadroes() {
@@ -373,8 +387,9 @@
       const dash = e.tracejado ? `stroke-dasharray="${e.tracejado.split(/\s+/).map((v) => Math.max(1, v * 0.6)).join(' ')}"` : '';
       return `<svg class="simb" viewBox="0 0 28 22" aria-hidden="true">${cont}<path d="M3 11h22" stroke="${e.cor}" stroke-width="${larg}" ${dash} stroke-linecap="${e.lineCap || 'round'}" fill="none"/></svg>`;
     }
-    let traco = e.cor, preench = e.preenchimento || e.cor;
-    if (cat) { preench = cat; traco = escurecer(cat, 0.3); }
+    let preench = e.preenchimento || e.cor;
+    let traco = poligonoPreenchido(rt) ? (e.padrao ? e.padrao.cor : preench) : e.cor;
+    if (cat) { preench = cat; traco = cat; }
     else if (rt.cats && rt.cats.size) {
       const cores = [...rt.cats.values()].slice(0, 4);
       const w = 22 / cores.length;
@@ -382,7 +397,7 @@
       return `<svg class="simb" viewBox="0 0 28 22" aria-hidden="true"><clipPath id="cp-${rt.cfg.id}-${++uid}"><rect x="3" y="4" width="22" height="14" rx="3"/></clipPath><g clip-path="url(#cp-${rt.cfg.id}-${uid})">${faixas}</g><rect x="3" y="4" width="22" height="14" rx="3" fill="none" stroke="${e.cor}" stroke-width="1"/></svg>`;
     }
     const fill = e.semPreenchimento ? 'none' : (e.padrao ? `url(#pad-${rt.cfg.id})` : preench);
-    const fo = e.padrao ? 1 : (e.opacidadePreenchimento === 0 ? 0 : Math.max(e.opacidadePreenchimento ?? 0.35, 0.25));
+    const fo = e.padrao ? 1 : (poligonoPreenchido(rt) ? OPACIDADE_PREENCHIMENTO : 0);
     const halo = e.contorno && !cat
       ? `<rect x="3" y="4" width="22" height="14" rx="3" fill="none" stroke="#9aa5b1" stroke-width="${Math.min(e.contorno.espessura, 5.5)}" stroke-opacity=".35"/>`
       : '';
@@ -557,6 +572,7 @@
       : (rt.cfg.horizonte ? 'Sem dados neste horizonte' : 'Arquivo não encontrado');
     const tag = rt.cfg.horizonte ? ` · <span class="tag-h" title="Varia conforme o horizonte selecionado">${esc(horizonteAtual().curto)}</span>` : '';
     const op = Math.round(rt.opacidade * 100);
+    const rotuloOpacidade = poligonoPreenchido(rt) ? 'Preenchimento' : 'Opacidade';
     return `
       <div class="camada ${rt.visivel ? 'ligada' : ''} ${d ? '' : 'indisponivel'} ${expandida ? 'expandida' : ''}" data-id="${rt.cfg.id}">
         <div class="camada-linha">
@@ -573,8 +589,8 @@
         </div>
         <div class="camada-opcoes">
           <div class="opacidade">
-            <span>Opacidade</span>
-            <input type="range" min="0" max="100" step="5" value="${op}" data-acao="opacidade" aria-label="Opacidade de ${esc(rt.cfg.nome)}">
+            <span>${rotuloOpacidade}</span>
+            <input type="range" min="0" max="100" step="5" value="${op}" data-acao="opacidade" aria-label="${rotuloOpacidade} de ${esc(rt.cfg.nome)}">
             <output>${op}%</output>
           </div>
           <div class="camada-botoes">
