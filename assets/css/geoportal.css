@@ -101,11 +101,12 @@ b, strong { font-weight: 700; }
 }
 
 .marca-orgao { display: flex; align-items: center; gap: 10px; flex: none; }
+/* Recorte exato da bandeira na logo (376 px): x 66–308, y 148–318 → escala 33/171 */
 .bandeira {
-  display: block; width: 46px; height: 33px; flex: none;
+  display: block; width: 47px; height: 33px; flex: none;
   background-image: url('../../MPOR%20BR.jpg');
-  background-size: 80px 80px;
-  background-position: -13px -30px;
+  background-size: 72.6px 72.6px;
+  background-position: -12.75px -28.6px;
   background-repeat: no-repeat;
   border-radius: 2px;
 }
@@ -289,6 +290,14 @@ body.painel-oculto .painel { margin-left: calc(-1 * var(--painel-w)); }
 .btn-mini:hover { background: #e6ebf2; color: var(--texto); }
 .camada.expandida .btn-mini { background: #dde3ec; color: var(--texto); }
 
+.leg-inline { padding: 0 10px 8px 46px; }
+.leg-inline-tit { display: block; font-size: 12px; font-weight: 700; color: var(--texto-3); margin-bottom: 3px; }
+.leg-inline ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; }
+.leg-inline li { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--texto-2); line-height: 1.25; }
+.leg-inline .amostra {
+  width: 14px; height: 11px; flex: none; border-radius: 2px;
+  background: color-mix(in srgb, var(--c) 45%, transparent); border: 2px solid var(--c);
+}
 .camada-opcoes { display: none; padding: 2px 10px 12px 40px; }
 .camada.expandida .camada-opcoes { display: block; }
 .opacidade { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--texto-2); }
@@ -780,6 +789,10 @@ body.preparando-impressao #mapa {
   .impressao-legenda .leg-sub .leg-item { font-size: 8pt; }
   .impressao-legenda h3 { font-size: 7.5pt; margin: 6px 0 2px; }
   .leaflet-control-attribution { font-size: 7pt; }
+  /* Mapa de fundo nítido no papel: blocos opacos e sem frestas entre eles */
+  .leaflet-tile { opacity: 1 !important; }
+  .leaflet-tile-container img.leaflet-tile { width: 256.6px !important; height: 256.6px !important; }
+  #mapa { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 /* ---------------------------------------------------------------- Responsivo */

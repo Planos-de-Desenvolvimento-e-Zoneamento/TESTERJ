@@ -22,7 +22,7 @@ const CORES_PERFIL = {
   'Carga Geral': '#16a34a',
   'Carga Geral e Granel Sólido': '#84cc16',
   'Produtos Siderúrgicos': '#475569',
-  'Não informado': '#9ca3af'
+  'Não informado': '#ff7a00'   // laranja vivo: visível sobre satélite, mapa claro e ruas
 };
 const POR_PERFIL = { campo: 'Perfil de Carga', cores: CORES_PERFIL };
 

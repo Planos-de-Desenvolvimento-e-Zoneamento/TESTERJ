@@ -226,7 +226,8 @@
     zoomSnap: 0.25,
     zoomDelta: 0.5,
     wheelPxPerZoomLevel: 100,
-    worldCopyJump: true
+    worldCopyJump: true,
+    fadeAnimation: false // evita blocos semitransparentes (véu branco) ao imprimir
   }).setView([-22.885, -43.2], 13);
 
   map.attributionControl.setPrefix('<a href="https://leafletjs.com" title="Biblioteca Leaflet">Leaflet</a>');
@@ -587,6 +588,7 @@
           </div>
           <button type="button" class="btn-mini" data-acao="camada-mais" title="Opções da camada" aria-expanded="${expandida}">${icone('more')}</button>
         </div>
+        ${rt.visivel && d ? legendaInline(rt) : ''}
         <div class="camada-opcoes">
           <div class="opacidade">
             <span>${rotuloOpacidade}</span>
@@ -599,6 +601,19 @@
             <button type="button" data-acao="camada-baixar" ${d ? '' : 'disabled'}>${icone('download')}GeoJSON</button>
           </div>
         </div>
+      </div>`;
+  }
+
+  // Legenda das categorias (ex.: perfis de carga) logo abaixo da camada ligada
+  function legendaInline(rt) {
+    if (!rt.cats) return '';
+    const presentes = new Set(feicoesFiltradas(rt).map((f) => valorCategoria(f, rt.cfg.categorias.campo)));
+    const itens = [...rt.cats.entries()].filter(([v]) => presentes.has(v));
+    if (!itens.length) return '';
+    const titulo = rt.cfg.categorias.campo === EST.campoPerfil ? 'Cores por perfil de carga' : `Cores por ${rt.cfg.categorias.campo.toLowerCase()}`;
+    return `<div class="leg-inline" aria-label="${esc(titulo)}">
+        <span class="leg-inline-tit">${esc(titulo)}</span>
+        <ul>${itens.map(([v, c]) => `<li><span class="amostra" style="--c:${c}"></span>${esc(v)}</li>`).join('')}</ul>
       </div>`;
   }
 
@@ -1332,7 +1347,10 @@
     vistaAntesImpressao = { centro: map.getCenter(), zoom: map.getZoom(), limites: map.getBounds() };
     document.body.classList.add('preparando-impressao');
     map.invalidateSize({ pan: false });
+    // Zoom inteiro na impressão: blocos do mapa de fundo sem escala fracionária (sem emendas)
+    map.options.zoomSnap = 1;
     map.fitBounds(vistaAntesImpressao.limites, { animate: false });
+    map.options.zoomSnap = 0.25;
   }
 
   function restaurarAposImpressao() {
@@ -1523,7 +1541,14 @@
     if (temFiltro()) {
       const ids = [EST.camadaAreas, EST.camadaCais, EST.camadaArrendadas, EST.camadaDisponiveis];
       const algumaVisivel = ids.some((id) => camadaEst(id) && camadaEst(id).visivel);
-      if (!algumaVisivel) {
+      const areas = camadaEst(EST.camadaAreas);
+      // O filtro por tipo de instalação só existe na camada de áreas afetas: ela precisa estar ligada
+      if (estado.filtros.tipo.size && areas && !areas.visivel) {
+        areas.visivel = true;
+        estado.ligadasPeloFiltro.add(EST.camadaAreas);
+        msg = 'Camada de áreas afetas ligada para exibir o filtro por tipo de instalação.';
+      }
+      if (!algumaVisivel && !estado.filtros.tipo.size) {
         [EST.camadaAreas, EST.camadaCais].forEach((id) => {
           const rt = camadaEst(id);
           if (rt) { rt.visivel = true; estado.ligadasPeloFiltro.add(id); }
@@ -1550,8 +1575,11 @@
 
   function alternarFiltro(dim, valor) {
     const s = estado.filtros[dim];
-    if (s.has(valor)) s.delete(valor); else s.add(valor);
+    const adicionou = !s.has(valor);
+    if (adicionou) s.add(valor); else s.delete(valor);
     aplicarFiltros();
+    // Aproxima o mapa das feições filtradas para localizá-las rapidamente
+    if (temFiltro()) aproximarFiltro(dim);
   }
 
   function limparFiltros() {
@@ -1561,8 +1589,11 @@
   }
 
   function aproximarFiltro() {
-    const feats = [EST.camadaAreas, EST.camadaCais, EST.camadaArrendadas, EST.camadaDisponiveis]
-      .map(camadaEst).filter((rt) => rt && rt.visivel).flatMap((rt) => rt.features);
+    // Com filtro por tipo, só a camada de áreas afetas é filtrada: enquadra apenas ela
+    const ids = estado.filtros.tipo.size
+      ? [EST.camadaAreas]
+      : [EST.camadaAreas, EST.camadaCais, EST.camadaArrendadas, EST.camadaDisponiveis];
+    const feats = ids.map(camadaEst).filter((rt) => rt && rt.visivel).flatMap((rt) => rt.features);
     const ext = extensaoDe(feats);
     if (ext) aproximarDe(ext, 17); else aviso('Nenhuma feição visível para o filtro atual.');
   }
