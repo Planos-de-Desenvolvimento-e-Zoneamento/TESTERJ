@@ -50,8 +50,13 @@
     'pn-medicao': 480
   };
 
-  const CAMPOS_ROTULO = ['Nome', 'NM_MUN', 'NM_UF', 'Arrendatário', 'Identificação', 'Trecho', 'Tipo da Instalação',
-    'Identificador do Berço', 'Número de Identificação', 'Legenda', 'Linha', 'Tipo de Área', 'Id', 'id'];
+  const CAMPOS_ROTULO = ['Nome', 'Município', 'Unidade da Federação', 'Arrendatário', 'Identificação', 'Trecho',
+    'Tipo da Instalação', 'Identificador do Berço', 'Número de Identificação', 'Legenda', 'Linha', 'Tipo de Área', 'Anexo'];
+
+  // Identificadores técnicos (Id, id, ID, FID, OBJECTID, Id_1…) ficam ocultos na interface.
+  // Campos com significado, como "Identificação" ou "Identificador do Berço", não casam com este padrão.
+  const CAMPO_TECNICO = /^(id|fid|objectid|gid|ogc_fid)(_\d+)?$/i;
+  const camposVisiveis = (props) => Object.keys(props).filter((k) => !CAMPO_TECNICO.test(k.trim()));
 
   /* ------------------------------------------------------------------
      Estado
@@ -304,7 +309,7 @@
 
   // Polígonos com preenchimento: linha da mesma cor do preenchimento, mais espessa e menos transparente
   const ESPESSURA_MIN_POLIGONO = 2.5;
-  const OPACIDADE_PREENCHIMENTO = 0.45; // preenchimento sólido padrão dos polígonos
+  const OPACIDADE_PREENCHIMENTO = CFG.opacidadePadrao ?? 0.45; // preenchimento sólido padrão (config.js)
   const OPACIDADE_HACHURA = 0.75;       // preenchimento hachurado (as linhas da hachura são finas)
   const poligonoPreenchido = (rt) => rt.cfg.tipo !== 'linha' && !rt.cfg.estilo.semPreenchimento &&
     (rt.cfg.estilo.padrao || rt.cfg.estilo.opacidadePreenchimento !== 0);
@@ -325,8 +330,23 @@
     rt.cats = mapa;
   }
 
-  function coresFeicao(rt, f) {
+  /* Estilo personalizado pelo usuário (camadas com "personalizavel"): cor, opacidade e largura do traço.
+     O halo ("contorno") acompanha a largura escolhida, mantendo a mesma folga do padrão. */
+  const CHAVE_PERS = (rt) => `estilo:${rt.cfg.id}`;
+  function estiloDe(rt) {
     const e = rt.cfg.estilo;
+    const p = rt.pers;
+    if (!rt.cfg.personalizavel || !p) return e;
+    const folga = e.contorno ? e.contorno.espessura - e.espessura : 0;
+    return Object.assign({}, e, {
+      cor: p.cor, espessura: p.largura, opacidadeTraco: p.opacidade,
+      contorno: e.contorno ? Object.assign({}, e.contorno, { espessura: p.largura + folga }) : undefined
+    });
+  }
+  const padraoPers = (rt) => ({ cor: rt.cfg.estilo.cor, opacidade: 1, largura: rt.cfg.estilo.espessura });
+
+  function coresFeicao(rt, f) {
+    const e = estiloDe(rt);
     if (rt.cats) {
       const c = rt.cats.get(valorCategoria(f, rt.cfg.categorias.campo)) || '#94a3b8';
       return { traco: c, preench: c };
@@ -337,7 +357,7 @@
   }
 
   function estiloFeicao(rt, f, realce) {
-    const e = rt.cfg.estilo;
+    const e = estiloDe(rt);
     const op = rt.opacidade;
     const { traco, preench } = coresFeicao(rt, f);
     const extra = realce ? 1.5 : 0;
@@ -353,7 +373,7 @@
     const esp = preenchido ? Math.max(e.espessura ?? 1.5, ESPESSURA_MIN_POLIGONO) : (e.espessura ?? 1.5);
     return {
       // Em polígonos o controle de opacidade atua só no preenchimento: o contorno fica sempre opaco
-      color: traco, weight: esp + extra, opacity: 1,
+      color: traco, weight: esp + extra, opacity: e.opacidadeTraco ?? 1,
       dashArray: e.tracejado || null, lineJoin: 'round',
       fill: !semPreench,
       fillColor: e.padrao ? `url(#pad-${rt.cfg.id})` : preench,
@@ -362,8 +382,9 @@
   }
 
   function estiloContorno(rt) {
-    const c = rt.cfg.estilo.contorno;
-    const opacidade = rt.cfg.tipo === 'linha' ? rt.opacidade * 0.95 : 0.95;
+    const e = estiloDe(rt);
+    const c = e.contorno;
+    const opacidade = rt.cfg.tipo === 'linha' ? rt.opacidade * 0.95 : 0.95 * (e.opacidadeTraco ?? 1);
     return { color: c.cor, weight: c.espessura, opacity: opacidade, fill: false, lineCap: 'round', lineJoin: 'round' };
   }
 
@@ -381,7 +402,7 @@
   }
 
   function simbolo(rt, cat) {
-    const e = rt.cfg.estilo;
+    const e = estiloDe(rt);
     if (rt.cfg.tipo === 'linha') {
       const larg = Math.min(e.espessura || 2, 4.5);
       const cont = e.contorno ? `<path d="M3 11h22" stroke="${e.contorno.cor}" stroke-width="${Math.min(e.contorno.espessura, 7.5)}" stroke-linecap="round" fill="none"/>` : '';
@@ -427,8 +448,10 @@
         geo: null,
         features: [],
         cats: null,
-        chaveConstruida: null
+        chaveConstruida: null,
+        pers: null
       };
+      if (cfg.personalizavel) rt.pers = armazenamento.ler(CHAVE_PERS(rt), null);
       estado.camadas.push(rt);
       estado.porId.set(cfg.id, rt);
     });
@@ -489,7 +512,7 @@
       style: (f) => estiloFeicao(rt, f),
       onEachFeature: (f, lyr) => {
         if (!rt.cfg.semTooltip) {
-          lyr.bindTooltip(() => `<span class="tt-camada">${esc(rt.cfg.nome)}</span>${esc(rotuloDe(rt, f))}`,
+          lyr.bindTooltip(() => `<span class="tt-camada">${esc(rt.cfg.nome)}</span><span class="tt-texto">${esc(rotuloDe(rt, f))}</span>`,
             { sticky: true, direction: 'top', offset: [0, -12], className: 'gp-tooltip', opacity: 1 });
         }
         lyr.on('mouseover', () => { if (!estado.medicao) lyr.setStyle(estiloFeicao(rt, f, true)); });
@@ -590,11 +613,12 @@
         </div>
         ${rt.visivel && d ? legendaInline(rt) : ''}
         <div class="camada-opcoes">
+          ${rt.cfg.personalizavel ? controlesPersonalizacao(rt) : `
           <div class="opacidade">
             <span>${rotuloOpacidade}</span>
             <input type="range" min="0" max="100" step="5" value="${op}" data-acao="opacidade" aria-label="${rotuloOpacidade} de ${esc(rt.cfg.nome)}">
             <output>${op}%</output>
-          </div>
+          </div>`}
           <div class="camada-botoes">
             <button type="button" data-acao="camada-zoom" ${d ? '' : 'disabled'}>${icone('focus')}Aproximar</button>
             <button type="button" data-acao="camada-tabela" ${d ? '' : 'disabled'}>${icone('table')}Tabela</button>
@@ -602,6 +626,32 @@
           </div>
         </div>
       </div>`;
+  }
+
+  // Controles de cor, opacidade e largura do traço (camadas "personalizavel", ex.: poligonal)
+  function controlesPersonalizacao(rt) {
+    const p = rt.pers || padraoPers(rt);
+    const op = Math.round(p.opacidade * 100);
+    return `
+      <div class="pers">
+        <label class="pers-linha"><span>Cor do traço</span>
+          <input type="color" value="${esc(p.cor)}" data-acao="pers-cor" aria-label="Cor do traço de ${esc(rt.cfg.nome)}"></label>
+        <label class="opacidade"><span>Opacidade</span>
+          <input type="range" min="10" max="100" step="5" value="${op}" data-acao="pers-op" aria-label="Opacidade do traço de ${esc(rt.cfg.nome)}">
+          <output>${op}%</output></label>
+        <label class="opacidade"><span>Largura</span>
+          <input type="range" min="1" max="8" step="0.5" value="${p.largura}" data-acao="pers-larg" aria-label="Largura do traço de ${esc(rt.cfg.nome)}">
+          <output>${NF1.format(p.largura)} px</output></label>
+        <button type="button" class="link" data-acao="pers-reset">Restaurar padrão</button>
+      </div>`;
+  }
+
+  function atualizarPersonalizacao(rt, elCamada) {
+    armazenamento.gravar(CHAVE_PERS(rt), rt.pers);
+    aplicarOpacidade(rt); // reaplica o estilo do traço e do halo
+    const s = elCamada && elCamada.querySelector('.camada-linha .simb');
+    if (s) s.outerHTML = simbolo(rt);
+    renderLegenda();
   }
 
   // Legenda das categorias (ex.: perfis de carga) logo abaixo da camada ligada
@@ -660,6 +710,12 @@
         rt.opacidade = Number(alvo.value) / 100;
         alvo.nextElementSibling.textContent = `${alvo.value}%`;
         aplicarOpacidade(rt);
+      } else if (rt && acao.startsWith('pers-')) {
+        rt.pers = Object.assign(padraoPers(rt), rt.pers);
+        if (acao === 'pers-cor') rt.pers.cor = alvo.value;
+        if (acao === 'pers-op') { rt.pers.opacidade = Number(alvo.value) / 100; alvo.nextElementSibling.textContent = `${alvo.value}%`; }
+        if (acao === 'pers-larg') { rt.pers.largura = Number(alvo.value); alvo.nextElementSibling.textContent = `${NF1.format(rt.pers.largura)} px`; }
+        atualizarPersonalizacao(rt, elCamada);
       }
       return;
     }
@@ -705,6 +761,14 @@
         break;
       case 'camada-baixar':
         baixarGeoJSON(rt);
+        break;
+      case 'pers-reset':
+        rt.pers = null;
+        armazenamento.gravar(CHAVE_PERS(rt), null);
+        aplicarOpacidade(rt);
+        renderArvore();
+        renderLegenda();
+        aviso('Estilo padrão restaurado.');
         break;
     }
   }
@@ -800,12 +864,12 @@
 
   function acerta(rt, g, ll, p, tol) {
     const x = ll.lng, y = ll.lat;
-    const soBorda = !!rt.cfg.estilo.semPreenchimento;
+    // Todo polígono responde ao clique no interior, inclusive os sem preenchimento visível (ex.: poligonal)
     switch (g.type) {
       case 'Polygon':
-        return (!soBorda && pontoNoPoligono(g.coordinates, x, y)) || g.coordinates.some((a) => pertoDaLinha(a, p, tol));
+        return pontoNoPoligono(g.coordinates, x, y) || g.coordinates.some((a) => pertoDaLinha(a, p, tol));
       case 'MultiPolygon':
-        return (!soBorda && g.coordinates.some((pg) => pontoNoPoligono(pg, x, y))) ||
+        return g.coordinates.some((pg) => pontoNoPoligono(pg, x, y)) ||
           g.coordinates.some((pg) => pg.some((a) => pertoDaLinha(a, p, tol)));
       case 'LineString':
         return pertoDaLinha(g.coordinates, p, tol);
@@ -840,7 +904,8 @@
         if (acerta(rt, f.geometry, ll, p, tol)) res.push({ rt, f });
       });
     });
-    return res;
+    // Camadas de referência amplas (poligonal) vão para o fim da lista
+    return res.filter((r) => !r.rt.cfg.identificarPorUltimo).concat(res.filter((r) => r.rt.cfg.identificarPorUltimo));
   }
 
   /* ------------------------------------------------------------------
@@ -859,7 +924,7 @@
   }
 
   function tabelaAtributos(f) {
-    const linhas = Object.keys(f.properties).map((k) =>
+    const linhas = camposVisiveis(f.properties).map((k) =>
       `<tr><th scope="row">${esc(k)}</th><td>${formatarValor(k, f.properties[k])}</td></tr>`).join('');
     return `<table class="atributos"><tbody>${linhas || '<tr><td class="vazio">Sem atributos</td></tr>'}</tbody></table>`;
   }
@@ -969,7 +1034,7 @@
 
   function colunasDe(features) {
     const cols = [];
-    features.forEach((f) => Object.keys(f.properties).forEach((k) => { if (!cols.includes(k)) cols.push(k); }));
+    features.forEach((f) => camposVisiveis(f.properties).forEach((k) => { if (!cols.includes(k)) cols.push(k); }));
     return cols;
   }
 
@@ -1085,7 +1150,7 @@
   function textoDaFeicao(f) {
     let t = textoBusca.get(f);
     if (t === undefined) {
-      t = semAcento(Object.values(f.properties).filter((v) => v !== null && v !== undefined).join(' | '));
+      t = semAcento(camposVisiveis(f.properties).map((k) => f.properties[k]).filter((v) => v !== null && v !== undefined).join(' | '));
       textoBusca.set(f, t);
     }
     return t;
@@ -1118,7 +1183,8 @@
       total += hits.length;
       const itens = hits.slice(0, 40).map((f) => {
         const idx = resultadosPesquisa.push({ rt, f }) - 1;
-        const campo = Object.entries(f.properties).find(([, v]) => v !== null && v !== undefined && semAcento(v).includes(q));
+        const campo = camposVisiveis(f.properties).map((k) => [k, f.properties[k]])
+          .find(([, v]) => v !== null && v !== undefined && semAcento(v).includes(q));
         const trecho = campo ? `${esc(campo[0])}: ${marcarTrecho(String(campo[1]), q)}` : '';
         return `<button type="button" class="res-item" data-r="${idx}"><strong>${marcarTrecho(rotuloDe(rt, f), q)}</strong><span>${trecho}</span></button>`;
       }).join('');
@@ -1285,7 +1351,7 @@
         </table>
         <button type="button" class="btn-sec" id="btnCopiarCoord">${icone('copy')}Copiar lat, lon</button>
       </div>`;
-    L.popup({ maxWidth: 280 }).setLatLng(ll).setContent(html).openOn(map);
+    L.popup({ minWidth: 240, maxWidth: 360 }).setLatLng(ll).setContent(html).openOn(map);
     const btn = document.getElementById('btnCopiarCoord');
     if (btn) btn.addEventListener('click', () => copiar(txt));
   }
@@ -1705,6 +1771,8 @@
       <h3>Sistemas de referência</h3>
       <p>Sistemas de origem dos arquivos: ${[...crs].map(esc).join(', ') || '—'}. Todos os dados são reprojetados para WGS 84 na exibição;
         a barra inferior mostra também as coordenadas em SIRGAS 2000 / UTM zona 23S (EPSG:31983).</p>
+      ${CFG.fontes && CFG.fontes.limites ? `<h3>Fontes</h3>
+      <p>${esc(CFG.fontes.limites.texto)} ${CFG.fontes.limites.ano ? `Malha de ${esc(CFG.fontes.limites.ano)}.` : 'Ano da malha não informado nos arquivos de origem.'}</p>` : ''}
       <h3>Mapas de fundo</h3>
       <ul>${CFG.basemaps.map((b) => `<li><b>${esc(b.nome)}</b> — ${b.atribuicao}</li>`).join('')}</ul>
       <div class="creditos">
