@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-  <link rel="stylesheet" href="assets/css/geoportal.css?v=11">
+  <link rel="stylesheet" href="assets/css/geoportal.css?v=18">
 </head>
 <body>
 <a class="pular" href="#arvore">Pular para as camadas</a>
@@ -106,6 +106,7 @@
         </label>
         <div class="resumo">
           <span id="contAtivas">0 camadas ativas</span>
+          <button type="button" class="link" id="btnOrdemPadrao" hidden title="Volta à ordem original de sobreposição das camadas">Restaurar ordem</button>
           <button type="button" class="link" id="btnDesligarTodas"><svg class="i" aria-hidden="true"><use href="#i-eye-off"/></svg>Desligar todas</button>
         </div>
       </div>
@@ -224,6 +225,14 @@
       <span id="impData"></span>
     </div>
     <div class="impressao-legenda" id="impLegenda"></div>
+    <div class="impressao-norte" aria-hidden="true">
+      <svg viewBox="0 0 40 52" width="34" height="44">
+        <polygon points="20,4 31,40 20,32" fill="#1b1b1b"/>
+        <polygon points="20,4 9,40 20,32" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.4" stroke-linejoin="round"/>
+        <text x="20" y="51" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#1b1b1b">N</text>
+      </svg>
+    </div>
+    <p class="impressao-escala" id="impEscala"></p>
     <div class="impressao-creditos">
       <span class="imp-orgao">Ministério de Portos e Aeroportos</span>
       <span class="imp-autoria">Desenvolvido por Maria Eduarda Almeida de Sousa</span>
@@ -286,8 +295,8 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
-<script src="assets/js/config.js?v=11"></script>
-<script src="assets/js/dados.js?v=11"></script>
-<script src="assets/js/geoportal.js?v=11"></script>
+<script src="assets/js/config.js?v=18"></script>
+<script src="assets/js/dados.js?v=18"></script>
+<script src="assets/js/geoportal.js?v=18"></script>
 </body>
 </html>

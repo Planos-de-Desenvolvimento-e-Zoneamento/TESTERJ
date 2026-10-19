@@ -22,8 +22,8 @@
   --borda: #e0e0e0;
   --borda-forte: #cccccc;
   --texto: #1b1b1b;
-  --texto-2: #333333;
-  --texto-3: #555555;
+  --texto-2: #262626;
+  --texto-3: #474747;
   --destaque: #f59e0b;
   --campo: #ffffff;          /* fundo de campos, botões secundários e cartões */
   --noite: #071d41;          /* fundo de barra de status, dicas e avisos */
@@ -235,7 +235,12 @@ body.painel-oculto .painel { margin-left: calc(-1 * var(--painel-w)); }
   font-size: 12px; color: var(--texto-3); background: var(--superficie-2);
 }
 .rodape-linha { display: flex; justify-content: space-between; gap: 8px; }
-.impressao-creditos { display: none; }
+.impressao-creditos, .impressao-norte, .impressao-escala { display: none; }
+
+/* Sem o retângulo de foco do navegador em volta do polígono clicado
+   (as feições do mapa não são navegáveis por teclado; a identificação usa o painel) */
+.leaflet-container .leaflet-interactive:focus,
+.leaflet-container .leaflet-interactive:focus-visible { outline: none; }
 .modal-corpo .creditos { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--borda); font-size: 12px; color: var(--texto-3); opacity: .7; }
 .modal-corpo .creditos h3 { margin: 0 0 2px; font-size: 11px; }
 .modal-corpo .creditos p { margin: 0; }
@@ -402,7 +407,8 @@ body.painel-oculto .painel { margin-left: calc(-1 * var(--painel-w)); }
 .grupo-ferr button:hover { background: var(--azul-claro); color: var(--azul); }
 .grupo-ferr button.ativo { background: var(--azul); color: var(--sobre-azul); }
 .grupo-ferr button:focus-visible { outline-offset: -3px; }
-body.info-aberta .ferramentas { right: 392px; }
+/* As ferramentas ficam sempre no canto direito; os painéis abrem à esquerda delas */
+:root { --margem-ferr: 66px; }
 
 /* Seletor de mapa de fundo */
 .seletor-base { position: absolute; z-index: 1000; left: 14px; bottom: calc(var(--status-h) + 14px); display: flex; align-items: flex-end; gap: 8px; }
@@ -446,7 +452,7 @@ body.info-aberta .ferramentas { right: 392px; }
 /* Leaflet: ajustes */
 .leaflet-control-attribution { font-size: 11px; background: rgba(255, 255, 255, .85) !important; border-top-left-radius: 6px; padding: 1px 8px !important; }
 .leaflet-control-scale { margin-right: 64px !important; margin-bottom: 8px !important; }
-body.info-aberta .leaflet-right .leaflet-control-scale { margin-right: 440px !important; }
+body.info-aberta .leaflet-right .leaflet-control-scale { margin-right: 446px !important; }
 .leaflet-control-scale-line { border-color: var(--texto-2); color: var(--texto-2); background: rgba(255, 255, 255, .85); font-size: 11px; font-weight: 700; }
 /* Tooltip de hover: o painel de tooltips do Leaflet tem largura 0, então sem "width: max-content"
    o texto encolhia até a menor palavra (74 px de largura, palavras empilhadas). */
@@ -475,7 +481,7 @@ body.info-aberta .leaflet-right .leaflet-control-scale { margin-right: 440px !im
 
 /* ---------------------------------------------------------------- Painel de identificação */
 .info {
-  position: absolute; z-index: 1050; top: 14px; right: 14px; bottom: calc(var(--status-h) + 14px);
+  position: absolute; z-index: 1050; top: 14px; right: var(--margem-ferr); bottom: calc(var(--status-h) + 14px);
   width: clamp(240px, 364px, 92vw); max-width: calc(100% - 28px);
   display: flex; flex-direction: column;
   background: var(--superficie); border-radius: 10px; box-shadow: var(--sombra-3);
@@ -511,7 +517,7 @@ body.info-aberta .leaflet-right .leaflet-control-scale { margin-right: 440px !im
 
 /* ---------------------------------------------------------------- Tabela de atributos */
 .tabela {
-  position: absolute; z-index: 1040; left: 114px; right: 70px; bottom: calc(var(--status-h) + 14px);
+  position: absolute; z-index: 1040; left: 114px; right: var(--margem-ferr); bottom: calc(var(--status-h) + 14px);
   height: min(42%, 380px);
   display: flex; flex-direction: column;
   background: var(--superficie); border-radius: 10px; box-shadow: var(--sombra-3);
@@ -519,7 +525,7 @@ body.info-aberta .leaflet-right .leaflet-control-scale { margin-right: 440px !im
   animation: entrar-baixo .2s ease;
 }
 @keyframes entrar-baixo { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-body.info-aberta .tabela { right: 392px; }
+body.info-aberta .tabela { right: calc(var(--margem-ferr) + 376px); }
 .tabela-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 8px 8px 14px; border-bottom: 1px solid var(--borda); }
 .tabela-tit { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .tabela-tit > .i { color: var(--azul); }
@@ -686,11 +692,117 @@ body.info-aberta .tabela { right: 392px; }
 .modal-corpo p { margin: 0 0 10px; }
 .modal-corpo ul { margin: 0; padding-left: 18px; }
 .modal-corpo li { margin: 3px 0; }
+.sobre-aviso {
+  margin-bottom: 14px; padding: 10px 14px; border-radius: var(--raio);
+  background: #fff8e1; border: 1px solid #f2d27a; border-left: 4px solid #e0a800; color: #3d3000;
+}
+.sobre-aviso p { margin: 0; }
+.sobre-aviso .sobre-data { margin-top: 6px; font-size: 13px; }
+:root[data-tema="escuro"] .sobre-aviso { background: #2b2410; border-color: #6b5410; color: #f3e3b0; }
+.modal-corpo .stats { margin-bottom: 4px; }
+.modal-corpo ul, .modal-corpo ol { margin: 0 0 4px; padding-left: 20px; }
+.modal-corpo li { margin: 6px 0; line-height: 1.45; }
+.sobre-passos li::marker { font-weight: 700; color: var(--azul); }
+.sobre-ferr { list-style: none; padding-left: 0 !important; display: grid; gap: 2px; }
+.sobre-ferr li { display: flex; align-items: flex-start; gap: 10px; margin: 3px 0; }
+.sobre-ico {
+  width: 30px; height: 30px; flex: none; display: grid; place-items: center;
+  border-radius: 7px; background: var(--azul-claro); color: var(--azul-escuro);
+}
+.sobre-ico .i { width: 16px; height: 16px; }
+.sobre-tecnico { margin-top: 16px; border: 1px solid var(--borda); border-radius: var(--raio); padding: 8px 12px; }
+.sobre-tecnico summary { cursor: pointer; font-weight: 700; color: var(--titulo); min-height: 28px; display: flex; align-items: center; }
+.sobre-tecnico ul { margin-top: 6px; font-size: 13px; }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .stat { background: var(--superficie-2); border: 1px solid var(--borda); border-radius: var(--raio); padding: 10px 12px; }
 .stat b { display: block; font-family: var(--fonte-titulo); font-size: 22px; color: var(--titulo); font-variant-numeric: tabular-nums; }
 .stat span { font-size: 13px; color: var(--texto-3); }
 kbd { font-family: inherit; font-size: 12px; background: var(--superficie-2); border: 1px solid var(--borda-forte); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; }
+
+/* ---------------------------------------------------------------- Vidro translúcido
+   O mapa ocupa a tela inteira; cabeçalho, painéis e ferramentas flutuam por cima
+   com fundo translúcido e desfoque. Textos reforçados para leitura sobre o vidro. */
+:root {
+  --vidro: rgba(255, 255, 255, .74);
+  --vidro-item: rgba(255, 255, 255, .6);
+  --vidro-borda: rgba(255, 255, 255, .7);
+  --vidro-ligada: rgba(19, 81, 180, .15);
+  --desfoque: blur(18px) saturate(1.4);
+  --halo-texto: 0 1px 0 rgba(255, 255, 255, .55);
+  --sombra-vidro: 0 12px 32px rgba(7, 29, 65, .28);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --vidro: rgba(255, 255, 255, .96); --vidro-item: rgba(255, 255, 255, .9); }
+}
+
+.topo {
+  position: absolute; top: 0; left: 0; right: 0;
+  background: var(--vidro);
+  -webkit-backdrop-filter: var(--desfoque); backdrop-filter: var(--desfoque);
+  box-shadow: 0 1px 0 var(--vidro-borda), 0 6px 18px rgba(7, 29, 65, .18);
+}
+.topo .segmentado, .topo .btn-topo { background: var(--vidro-item); }
+.topo .segmentado { border-color: var(--vidro-borda); }
+.corpo { height: 100%; }
+.area-mapa { position: absolute; inset: 0; }
+
+.topo, .painel, .est, .info, .grupo-ferr { text-shadow: var(--halo-texto); }
+.btn-pri, .segmentado button[aria-checked="true"], .tag-h, .chip { text-shadow: none; }
+
+.painel {
+  position: absolute; top: calc(var(--topo-h) + 12px); left: 12px; bottom: calc(var(--status-h) + 12px);
+  background: var(--vidro); border: 1px solid var(--vidro-borda); border-radius: 14px;
+  -webkit-backdrop-filter: var(--desfoque); backdrop-filter: var(--desfoque);
+  box-shadow: var(--sombra-vidro); overflow: hidden;
+  transition: transform .22s ease;
+}
+body.painel-oculto .painel { margin-left: 0; transform: translateX(calc(-100% - 24px)); }
+.painel .abas, .painel .aba-topo, .painel .painel-rodape { background: transparent; border-color: var(--vidro-borda); }
+.painel .campo-busca { background: var(--vidro-item); }
+.painel .camada:hover, .painel .camada.expandida { background: var(--vidro-item); }
+.painel .camada.ligada { background: var(--vidro-ligada); }
+.painel .grupo-toggle:hover { background: var(--vidro-item); }
+.painel .grupo-cont { background: var(--vidro-item); color: var(--texto-2); border-color: var(--vidro-borda); }
+
+.ferramentas { top: calc(var(--topo-h) + 14px); }
+.grupo-ferr {
+  background: var(--vidro); border-color: var(--vidro-borda);
+  -webkit-backdrop-filter: var(--desfoque); backdrop-filter: var(--desfoque);
+}
+.grupo-ferr button + button { border-top-color: var(--vidro-borda); }
+.filtro-mapa { top: calc(var(--topo-h) + 14px); }
+.seletor-base { left: calc(var(--painel-w) + 24px); transition: left .22s ease; }
+body.painel-oculto .seletor-base { left: 14px; }
+.tabela { left: calc(var(--painel-w) + 24px); }
+body.painel-oculto .tabela { left: 114px; }
+
+/* Painel de identificação: mesmo vidro e altura do conteúdo */
+.info {
+  top: calc(var(--topo-h) + 14px); bottom: auto;
+  max-height: calc(100% - var(--topo-h) - var(--status-h) - 40px);
+  background: var(--vidro); border: 1px solid var(--vidro-borda); border-radius: 14px;
+  -webkit-backdrop-filter: var(--desfoque); backdrop-filter: var(--desfoque);
+}
+.info .info-cab { border-color: var(--vidro-borda); }
+.info .card, .info .btn-sec { background: var(--vidro-item); border-color: var(--vidro-borda); }
+.info .card-cab:hover { background: var(--vidro-item); }
+.info .atributos th, .info .atributos td { border-top-color: var(--vidro-borda); }
+
+/* Painel estatístico flutuante */
+.est {
+  position: absolute; top: calc(var(--topo-h) + 12px); right: 12px; bottom: calc(var(--status-h) + 12px);
+  background: var(--vidro); border: 1px solid var(--vidro-borda); border-radius: 14px;
+  -webkit-backdrop-filter: var(--desfoque); backdrop-filter: var(--desfoque);
+  box-shadow: var(--sombra-vidro); overflow: hidden;
+}
+.est .est-cab, .est .est-filtros { background: transparent; border-color: var(--vidro-borda); }
+.est .kpi, .est .grafico { background: var(--vidro-item); border-color: var(--vidro-borda); }
+/* Com o painel estatístico aberto, ferramentas, identificação e tabela abrem espaço à esquerda dele */
+.est { right: var(--margem-ferr); }
+body.est-aberto .info { right: calc(var(--margem-ferr) + var(--est-w) + 12px); }
+body.est-aberto .tabela { right: calc(var(--margem-ferr) + var(--est-w) + 12px); }
+body.est-aberto.info-aberta .tabela { right: calc(var(--margem-ferr) + var(--est-w) + 388px); }
+body.est-aberto .leaflet-right .leaflet-control-scale { margin-right: calc(var(--margem-ferr) + var(--est-w) + 20px) !important; }
 
 /* ---------------------------------------------------------------- Tema escuro (opcional) */
 #btnTema .ico-sol { display: none; }
@@ -724,7 +836,19 @@ kbd { font-family: inherit; font-size: 12px; background: var(--superficie-2); bo
   --sombra-3: 0 12px 32px rgba(0, 0, 0, .55), 0 3px 8px rgba(0, 0, 0, .35);
   --foco: 0 0 0 3px #0b1322, 0 0 0 6px var(--azul);
 }
-:root[data-tema="escuro"] .topo { box-shadow: 0 1px 0 var(--borda), 0 2px 8px rgba(0, 0, 0, .4); }
+:root[data-tema="escuro"] {
+  --vidro: rgba(11, 19, 34, .78);
+  --vidro-item: rgba(255, 255, 255, .07);
+  --vidro-borda: rgba(255, 255, 255, .13);
+  --vidro-ligada: rgba(122, 167, 245, .16);
+  --halo-texto: 0 1px 1px rgba(0, 0, 0, .55);
+  --sombra-vidro: 0 12px 32px rgba(0, 0, 0, .5);
+  --texto-3: #bccadc;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-tema="escuro"] { --vidro: rgba(11, 19, 34, .97); }
+}
+:root[data-tema="escuro"] .topo { box-shadow: 0 1px 0 var(--vidro-borda), 0 6px 18px rgba(0, 0, 0, .45); }
 :root[data-tema="escuro"] .orgao-txt { color: var(--marca-1); }
 :root[data-tema="escuro"] .orgao-txt strong { color: var(--marca-2); }
 :root[data-tema="escuro"] .chk span { border-color: #8a9ab3; }
@@ -776,7 +900,7 @@ body.preparando-impressao #mapa {
   .topo, .painel, .ferramentas, .seletor-base, .info, .tabela, .barra-status, .aviso,
   .carregando, .modal, .est, .filtro-mapa, .pular { display: none !important; }
   .corpo { height: auto; display: block; }
-  .area-mapa { position: relative; width: 1047px; height: 700px; }
+  .area-mapa { position: relative; inset: auto; width: 1047px; height: 700px; }
   #mapa, body.preparando-impressao #mapa {
     position: absolute; inset: auto; top: 72px; left: 0; transform: none; box-shadow: none;
     width: var(--imp-mapa-l); height: var(--imp-mapa-a); border: 1px solid #999;
@@ -795,6 +919,14 @@ body.preparando-impressao #mapa {
     line-height: 1.3; border-top: 1px solid #ccc; padding-top: 4px;
   }
   .impressao-creditos span { display: block; }
+  .impressao-norte {
+    display: block; position: absolute; top: 84px; left: 752px; z-index: 2700; /* acima do mapa (2600 na preparação) */
+    padding: 4px 6px 2px; background: rgba(255, 255, 255, .9); border: 1px solid #999; border-radius: 4px;
+  }
+  .impressao-escala {
+    display: block; position: absolute; top: 688px; left: 0; width: 810px; margin: 0;
+    font-size: 8pt; color: #333;
+  }
   .imp-orgao { font-size: 8pt; font-weight: 700; color: #333; }
   .imp-autoria { font-size: 6.5pt; color: #777; margin-top: 1px; }
   .impressao-legenda .leg-item { font-size: 8.5pt; padding: 1px 0; }
@@ -821,16 +953,11 @@ body.preparando-impressao #mapa {
   .orgao-txt, .divisor { display: none; }
   .topo-acoes .btn-topo .rotulo-btn { display: none; }
   .btn-topo { padding: 0 10px; }
-  /* Painel estatístico sobrepõe o mapa em telas médias */
-  .est { position: absolute; top: 0; right: 0; bottom: 0; box-shadow: var(--sombra-3); }
 }
 @media (max-width: 1024px) {
   :root { --painel-w: 320px; }
   .segmentado button { padding: 0 10px; font-size: 13px; }
-  .painel { position: absolute; top: 0; bottom: 0; left: 0; box-shadow: var(--sombra-3); }
-  body.painel-oculto .painel { margin-left: 0; transform: translateX(-105%); }
-  body.info-aberta .ferramentas { right: 14px; }
-  body.info-aberta .tabela { right: 14px; }
+  body.info-aberta .tabela { right: var(--margem-ferr); }
   .tabela { right: 14px; }
   .campo-busca.compacto { width: 150px; }
   .st-utm { display: none; }
@@ -838,7 +965,11 @@ body.preparando-impressao #mapa {
   .btn-pri { padding: 0 10px; }
 }
 @media (max-width: 720px) {
-  :root { --topo-h: 120px; --est-w: 100%; }
+  :root { --topo-h: 120px; }
+  :root { --margem-ferr: 58px; }
+  .est { left: 10px; right: var(--margem-ferr); width: auto; }
+  body.est-aberto .info { right: var(--margem-ferr); }
+  body.painel-oculto .tabela { left: 10px; }
   .topo-conteudo { flex-wrap: wrap; align-content: center; row-gap: 8px; padding: 8px 12px; }
   .marca-app { flex: 1; }
   .marca-app h1 { font-size: 15px; }
@@ -846,8 +977,8 @@ body.preparando-impressao #mapa {
   .horizonte { order: 3; width: 100%; margin: 0; }
   .segmentado { width: 100%; }
   .segmentado button { flex: 1; padding: 0 4px; font-size: 12.5px; }
-  .info { top: auto; left: 10px; right: 10px; width: auto; height: 55%; bottom: calc(var(--status-h) + 10px); }
-  .ferramentas { top: 10px; right: 10px; }
+  .info { top: auto; left: 10px; right: var(--margem-ferr); width: auto; height: 55%; bottom: calc(var(--status-h) + 10px); }
+  .ferramentas { top: calc(var(--topo-h) + 10px); right: 10px; }
   .seletor-base { left: 10px; }
   .base-atual { width: 64px; height: 64px; }
   .base-opcoes { flex-direction: column; }

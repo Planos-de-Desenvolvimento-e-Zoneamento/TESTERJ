@@ -35,12 +35,14 @@ window.GEOPORTAL_CONFIG = {
   subtitulo: 'Zoneamento, infraestrutura e acessos portuários',
   orgao: { linha1: 'Ministério de', linha2: 'Portos e Aeroportos' },
   opacidadePadrao: OPACIDADE_PADRAO,
+  dataAtualizacao: '19/10/2026', // exibida no "Sobre"
+  linkPdz: 'https://www.gov.br/portos-e-aeroportos/pt-br/assuntos/transporte-aquaviario/planejamento-portuario/plano-de-desenvolvimento-e-zoneamento-pdz',
 
   // Fontes exibidas no "Sobre"
   fontes: {
     limites: {
       texto: 'Municípios e Unidades da Federação: IBGE — Malha Territorial.',
-      ano: null // ano da malha não consta nos arquivos de origem
+      ano: 'março de 2026'
     }
   },
 
@@ -267,8 +269,8 @@ window.GEOPORTAL_CONFIG = {
       nome: 'Áreas urbanas e rurais',
       arquivo: 'Áreas Urbanas e Rurais',
       painel: 'pn-limites', rotulo: ['Tipo de Área'],
-      estilo: { cor: '#a16207', espessura: 1.2, opacidadePreenchimento: 0.2 },
-      categorias: { campo: 'Tipo de Área', cores: { 'Urbana': '#f59e0b', 'Rural': '#84cc16' } }
+      // Só há a categoria "Urbana" nos dados: cor única, sem legenda por tipo
+      estilo: { cor: '#f59e0b', preenchimento: '#f59e0b', espessura: 1.2, opacidadePreenchimento: OPACIDADE_PADRAO }
     },
 
     /* ---------------- Limites e referências ---------------- */
@@ -287,14 +289,15 @@ window.GEOPORTAL_CONFIG = {
       nome: 'Municípios do Rio de Janeiro',
       arquivo: 'Malha Municipal RJ JSON',
       painel: 'pn-limites', rotulo: ['Município'], semTooltip: true,
-      estilo: { cor: '#334155', preenchimento: '#334155', espessura: 2, opacidadePreenchimento: OPACIDADE_PADRAO, contorno: { cor: '#ffffff', espessura: 5 } }
+      // Linha escura com halo branco; preenchimento claro para não escurecer o satélite
+      estilo: { cor: '#334155', preenchimento: '#e2e8f0', tracoProprio: true, espessura: 2, opacidadePreenchimento: OPACIDADE_PADRAO, contorno: { cor: '#ffffff', espessura: 5 } }
     },
     {
       id: 'uf', grupo: 'ref', tipo: 'poligono',
       nome: 'Unidades da Federação',
       arquivo: 'UF BR JSON',
       painel: 'pn-limites', rotulo: ['Unidade da Federação', 'Sigla da UF'], semTooltip: true,
-      estilo: { cor: '#0f172a', preenchimento: '#0f172a', espessura: 3, opacidadePreenchimento: OPACIDADE_PADRAO, contorno: { cor: '#ffffff', espessura: 7 } }
+      estilo: { cor: '#0f172a', preenchimento: '#cbd5e1', tracoProprio: true, espessura: 3, opacidadePreenchimento: OPACIDADE_PADRAO, contorno: { cor: '#ffffff', espessura: 7 } }
     }
   ]
 };

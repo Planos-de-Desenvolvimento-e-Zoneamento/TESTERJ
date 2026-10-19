@@ -63,7 +63,8 @@
      ------------------------------------------------------------------ */
   const estado = {
     horizonte: armazenamento.ler('horizonte', CFG.horizontes[0].id),
-    base: armazenamento.ler('base', CFG.baseInicial || CFG.basemaps[0].id),
+    // O mapa sempre abre no fundo padrão (satélite); a troca vale só durante a visita
+    base: CFG.baseInicial || CFG.basemaps[0].id,
     brutos: new Map(),
     preparados: new Map(),
     camadas: [],
@@ -260,7 +261,6 @@
     Object.values(basesLeaflet).forEach((l) => map.removeLayer(l));
     basesLeaflet[id].addTo(map);
     estado.base = id;
-    armazenamento.gravar('base', id);
     const b = CFG.basemaps.find((x) => x.id === id);
     $('#baseAtualImg').src = b.miniatura;
     $('#baseAtualNome').textContent = b.nome;
@@ -352,7 +352,8 @@
       return { traco: c, preench: c };
     }
     const preench = e.preenchimento || e.cor;
-    if (poligonoPreenchido(rt)) return { traco: e.padrao ? e.padrao.cor : preench, preench };
+    // tracoProprio: linha com cor própria (ex.: limites escuros com preenchimento claro)
+    if (poligonoPreenchido(rt) && !e.tracoProprio) return { traco: e.padrao ? e.padrao.cor : preench, preench };
     return { traco: e.cor, preench };
   }
 
@@ -410,7 +411,7 @@
       return `<svg class="simb" viewBox="0 0 28 22" aria-hidden="true">${cont}<path d="M3 11h22" stroke="${e.cor}" stroke-width="${larg}" ${dash} stroke-linecap="${e.lineCap || 'round'}" fill="none"/></svg>`;
     }
     let preench = e.preenchimento || e.cor;
-    let traco = poligonoPreenchido(rt) ? (e.padrao ? e.padrao.cor : preench) : e.cor;
+    let traco = poligonoPreenchido(rt) && !e.tracoProprio ? (e.padrao ? e.padrao.cor : preench) : e.cor;
     if (cat) { preench = cat; traco = cat; }
     else if (rt.cats && rt.cats.size) {
       const cores = [...rt.cats.values()].slice(0, 4);
@@ -503,7 +504,7 @@
     rt.chaveConstruida = chave(arquivoDe(rt)) + '#' + assinaturaFiltro(rt);
     if (!rt.features.length) return;
     const colecao = { type: 'FeatureCollection', features: rt.features };
-    const pane = rt.cfg.painel || 'pn-zoneamento';
+    const pane = paneDe(rt);
     if (rt.cfg.estilo.contorno) {
       L.geoJSON(colecao, { pane, interactive: false, style: () => estiloContorno(rt) }).addTo(rt.grupo);
     }
@@ -539,6 +540,60 @@
     });
   }
 
+  /* ------------------------------------------------------------------
+     Ordem de desenho: cada camada tem o próprio "pane" do Leaflet.
+     O z-index segue estado.ordemDesenho (de baixo para cima), que o
+     usuário pode alterar com "Para frente" / "Para trás".
+     ------------------------------------------------------------------ */
+  const Z_BASE_CAMADAS = 401; // acima dos mapas de fundo e abaixo do destaque (470)
+  const paneDe = (rt) => `pn-c-${rt.cfg.id}`;
+
+  function ordemPadrao() {
+    return estado.camadas.slice()
+      .sort((a, b) => ((PANES[a.cfg.painel] || 430) - (PANES[b.cfg.painel] || 430)) || (a.ordem - b.ordem))
+      .map((rt) => rt.cfg.id);
+  }
+
+  function criarPanesCamadas() {
+    const padrao = ordemPadrao();
+    const salva = armazenamento.ler('ordemDesenho', null);
+    const valida = Array.isArray(salva) && salva.length === padrao.length && padrao.every((id) => salva.includes(id));
+    estado.ordemDesenho = valida ? salva : padrao;
+    estado.camadas.forEach((rt) => { if (!map.getPane(paneDe(rt))) map.createPane(paneDe(rt)); });
+    aplicarOrdemDesenho();
+  }
+
+  function aplicarOrdemDesenho() {
+    estado.ordemDesenho.forEach((id, i) => { map.getPane(`pn-c-${id}`).style.zIndex = Z_BASE_CAMADAS + i; });
+    const personalizada = estado.ordemDesenho.join() !== ordemPadrao().join();
+    $('#btnOrdemPadrao').hidden = !personalizada;
+  }
+
+  function moverCamada(rt, direcao) {
+    const ordem = estado.ordemDesenho;
+    const i = ordem.indexOf(rt.cfg.id);
+    // Próxima camada LIGADA na direção pedida (camadas desligadas não contam)
+    let j = i + direcao;
+    while (j >= 0 && j < ordem.length && !estado.porId.get(ordem[j]).visivel) j += direcao;
+    if (j < 0 || j >= ordem.length) {
+      aviso(direcao > 0 ? 'Esta camada já está na frente das camadas ligadas.' : 'Esta camada já está atrás das camadas ligadas.');
+      return;
+    }
+    const vizinha = estado.porId.get(ordem[j]);
+    ordem.splice(i, 1);
+    ordem.splice(ordem.indexOf(vizinha.cfg.id) + (direcao > 0 ? 1 : 0), 0, rt.cfg.id);
+    armazenamento.gravar('ordemDesenho', ordem);
+    aplicarOrdemDesenho();
+    aviso(`"${rt.cfg.nome}" agora aparece ${direcao > 0 ? 'acima' : 'abaixo'} de "${vizinha.cfg.nome}".`, 3200);
+  }
+
+  function restaurarOrdemDesenho() {
+    estado.ordemDesenho = ordemPadrao();
+    armazenamento.gravar('ordemDesenho', null);
+    aplicarOrdemDesenho();
+    aviso('Ordem padrão das camadas restaurada.');
+  }
+
   function definirVisibilidade(rt, v, automatico) {
     rt.visivel = v;
     // Uma escolha manual do usuário prevalece sobre a ativação automática do filtro
@@ -570,10 +625,17 @@
     return L.latLngBounds([b[1], b[0]], [b[3], b[2]]);
   }
 
+  // Folgas para enquadrar feições sem ficarem atrás dos painéis flutuantes
   function margensMapa() {
-    const direita = document.body.classList.contains('info-aberta') ? 400 : 70;
-    const baixo = $('#tabela').hidden ? 40 : Math.min($('#tabela').offsetHeight + 30, map.getSize().y * 0.6);
-    return { paddingTopLeft: [40, 40], paddingBottomRight: [direita, baixo] };
+    const corpo = document.body.classList;
+    const telaLarga = map.getSize().x > 900;
+    const topo = $('.topo').offsetHeight + 24;
+    const esquerda = telaLarga && !corpo.contains('painel-oculto') ? $('#painel').getBoundingClientRect().right + 24 : 40;
+    let direita = 70;
+    if (estado.estAberto && telaLarga) direita += $('#painelEst').offsetWidth + 12;
+    if (corpo.contains('info-aberta') && telaLarga) direita += 378;
+    const baixo = $('#tabela').hidden ? 50 : Math.min($('#tabela').offsetHeight + 40, map.getSize().y * 0.6);
+    return { paddingTopLeft: [esquerda, topo], paddingBottomRight: [direita, baixo] };
   }
 
   function aproximarDe(bounds, maxZoom = 18) {
@@ -620,6 +682,8 @@
             <output>${op}%</output>
           </div>`}
           <div class="camada-botoes">
+            <button type="button" data-acao="ordem-frente" title="Desenhar acima da próxima camada ligada">↑ Para frente</button>
+            <button type="button" data-acao="ordem-tras" title="Desenhar abaixo da camada ligada anterior">↓ Para trás</button>
             <button type="button" data-acao="camada-zoom" ${d ? '' : 'disabled'}>${icone('focus')}Aproximar</button>
             <button type="button" data-acao="camada-tabela" ${d ? '' : 'disabled'}>${icone('table')}Tabela</button>
             <button type="button" data-acao="camada-baixar" ${d ? '' : 'disabled'}>${icone('download')}GeoJSON</button>
@@ -659,7 +723,7 @@
     if (!rt.cats) return '';
     const presentes = new Set(feicoesFiltradas(rt).map((f) => valorCategoria(f, rt.cfg.categorias.campo)));
     const itens = [...rt.cats.entries()].filter(([v]) => presentes.has(v));
-    if (!itens.length) return '';
+    if (itens.length < 2) return ''; // uma só cor não precisa de legenda
     const titulo = rt.cfg.categorias.campo === EST.campoPerfil ? 'Cores por perfil de carga' : `Cores por ${rt.cfg.categorias.campo.toLowerCase()}`;
     return `<div class="leg-inline" aria-label="${esc(titulo)}">
         <span class="leg-inline-tit">${esc(titulo)}</span>
@@ -761,6 +825,14 @@
         break;
       case 'camada-baixar':
         baixarGeoJSON(rt);
+        break;
+      case 'ordem-frente':
+        if (!rt.visivel) { aviso('Ligue a camada para mudar a ordem dela no mapa.'); break; }
+        moverCamada(rt, +1);
+        break;
+      case 'ordem-tras':
+        if (!rt.visivel) { aviso('Ligue a camada para mudar a ordem dela no mapa.'); break; }
+        moverCamada(rt, -1);
         break;
       case 'pers-reset':
         rt.pers = null;
@@ -885,9 +957,10 @@
   }
 
   function camadasVisiveisOrdenadas() {
+    // Da camada desenhada por cima para a de baixo (segue a ordem escolhida pelo usuário)
     return estado.camadas
       .filter((rt) => rt.visivel && rt.features.length && map.hasLayer(rt.grupo))
-      .sort((a, b) => (PANES[b.cfg.painel] - PANES[a.cfg.painel]) || (b.ordem - a.ordem));
+      .sort((a, b) => estado.ordemDesenho.indexOf(b.cfg.id) - estado.ordemDesenho.indexOf(a.cfg.id));
   }
 
   function identificar(ll) {
@@ -1417,6 +1490,12 @@
     map.options.zoomSnap = 1;
     map.fitBounds(vistaAntesImpressao.limites, { animate: false });
     map.options.zoomSnap = 0.25;
+    // Escala numérica da folha impressa (96 px por polegada → 1 px = 0,2646 mm)
+    const lat = map.getCenter().lat;
+    const metrosPorPx = (156543.03392 * Math.cos((lat * Math.PI) / 180)) / Math.pow(2, map.getZoom());
+    const escala = metrosPorPx / 0.0002645833;
+    const passo = Math.pow(10, Math.floor(Math.log10(escala)) - 1);
+    $('#impEscala').textContent = `Escala aproximada 1:${NF0.format(Math.round(escala / passo) * passo)} (folha A4 a 100%)`;
   }
 
   function restaurarAposImpressao() {
@@ -1668,15 +1747,15 @@
     estado.estAberto = true;
     $('#painelEst').hidden = false;
     $('#btnPainelEst').setAttribute('aria-expanded', 'true');
+    document.body.classList.add('est-aberto');
     renderEst();
-    setTimeout(() => map.invalidateSize(), 60);
   }
   function fecharEst() {
     estado.estAberto = false;
     $('#painelEst').hidden = true;
     $('#estTooltip').hidden = true;
     $('#btnPainelEst').setAttribute('aria-expanded', 'false');
-    setTimeout(() => map.invalidateSize(), 60);
+    document.body.classList.remove('est-aberto');
   }
 
   function ligarEst() {
@@ -1750,31 +1829,84 @@
       });
     });
     const crs = new Set([...estado.preparados.values()].filter(Boolean).map((d) => d.crsOrigem));
+    const ferr = (ic, nome, txt) => `<li><span class="sobre-ico">${icone(ic)}</span><span><b>${nome}</b> — ${txt}</span></li>`;
+    const limites = CFG.fontes && CFG.fontes.limites;
     $('#sobreCorpo').innerHTML = `
+      <div class="sobre-aviso" role="note">
+        <p><b>Este geoportal é uma ferramenta de consulta.</b> Ele não substitui os documentos oficiais do porto, publicados no site
+          do Ministério de Portos e Aeroportos:
+          <a href="${CFG.linkPdz}" target="_blank" rel="noopener">Plano de Desenvolvimento e Zoneamento (PDZ)</a>.</p>
+        ${CFG.dataAtualizacao ? `<p class="sobre-data">Dados atualizados em <b>${esc(CFG.dataAtualizacao)}</b>.</p>` : ''}
+      </div>
+
       <div class="stats">
         <div class="stat"><b>${estado.camadas.length}</b><span>camadas temáticas</span></div>
-        <div class="stat"><b>${arquivos.size}</b><span>arquivos GeoJSON</span></div>
+        <div class="stat"><b>${arquivos.size}</b><span>arquivos de dados</span></div>
         <div class="stat"><b>${NF0.format(feicoes)}</b><span>feições</span></div>
       </div>
-      <h3>Horizontes de planejamento</h3>
-      <p>As camadas marcadas com a etiqueta de horizonte mudam conforme a seleção no topo da página:
-        ${CFG.horizontes.map((h) => `<b>${esc(h.nome)}</b>`).join(', ')}. As demais camadas são comuns a todos os horizontes.</p>
-      <h3>Como usar</h3>
+
+      <h3>Primeiros passos</h3>
+      <ol class="sobre-passos">
+        <li>Na aba <b>Camadas</b>, à esquerda, marque o que deseja ver no mapa.</li>
+        <li>No topo, escolha o <b>horizonte</b>: ${CFG.horizontes.map((h) => esc(h.nome)).join(', ')}.
+          As camadas com a etiqueta do horizonte mudam conforme a escolha; as demais são iguais em todos.</li>
+        <li><b>Clique em uma área</b> do mapa para ver as informações dela. Se houver várias camadas no ponto, todas aparecem na lista.</li>
+      </ol>
+
+      <h3>Camadas e cores</h3>
       <ul>
-        <li>Clique em uma feição para ver seus atributos; o painel lista todas as camadas sob o ponto clicado.</li>
-        <li>Clique com o botão direito no mapa para obter as coordenadas geográficas e UTM do ponto.</li>
-        <li>No menu <b>⋯</b> de cada camada: opacidade, aproximar, tabela de atributos e exportação em GeoJSON.</li>
-        <li>Use a aba <b>Pesquisar</b> para localizar arrendatários, berços, trechos, armazéns e outros elementos.</li>
-        <li>O <b>Painel estatístico</b> resume os perfis de carga. Clique nas barras para filtrar o mapa, as tabelas e os demais gráficos; clique de novo para remover o filtro.</li>
-        <li>Atalhos: <kbd>Esc</kbd> fecha painéis e cancela medições; <kbd>←</kbd> <kbd>→</kbd> alternam o horizonte quando o seletor está em foco.</li>
+        <li><b>Cores por perfil de carga:</b> cada perfil (Contêineres, Veículos, Passageiros…) tem sempre a mesma cor
+          em todas as camadas. A legenda completa está na aba <b>Legenda</b>.</li>
+        <li><b>Menu ⋯ de cada camada:</b> nele você ajusta o preenchimento, muda a ordem no mapa, aproxima a camada,
+          abre a tabela de dados e baixa os arquivos.</li>
+        <li><b>Qual camada fica por cima:</b> quando duas camadas ligadas ocupam o mesmo lugar, a que está na frente cobre a outra.
+          Para mudar isso, abra o menu ⋯ da camada e clique em <b>↑ Para frente</b> ou <b>↓ Para trás</b>.
+          Exemplo: para ver as áreas afetas por cima da poligonal, ligue as duas camadas e clique em "Para frente" nas áreas afetas.
+          A ordem da lista no painel continua a mesma; muda apenas o que aparece por cima no mapa.
+          Para desfazer, clique em <b>Restaurar ordem</b>, que aparece ao lado de "Desligar todas".</li>
+        <li><b>Poligonal do Porto Organizado:</b> no menu ⋯ você pode mudar a cor, a transparência e a espessura da linha.
+          O botão "Restaurar padrão" volta ao vermelho original.</li>
       </ul>
-      <h3>Sistemas de referência</h3>
-      <p>Sistemas de origem dos arquivos: ${[...crs].map(esc).join(', ') || '—'}. Todos os dados são reprojetados para WGS 84 na exibição;
-        a barra inferior mostra também as coordenadas em SIRGAS 2000 / UTM zona 23S (EPSG:31983).</p>
-      ${CFG.fontes && CFG.fontes.limites ? `<h3>Fontes</h3>
-      <p>${esc(CFG.fontes.limites.texto)} ${CFG.fontes.limites.ano ? `Malha de ${esc(CFG.fontes.limites.ano)}.` : 'Ano da malha não informado nos arquivos de origem.'}</p>` : ''}
-      <h3>Mapas de fundo</h3>
-      <ul>${CFG.basemaps.map((b) => `<li><b>${esc(b.nome)}</b> — ${b.atribuicao}</li>`).join('')}</ul>
+
+      <h3>Ferramentas do mapa</h3>
+      <ul class="sobre-ferr">
+        ${ferr('plus', 'Aproximar e afastar', 'também funciona com a roda do mouse.')}
+        ${ferr('home', 'Extensão inicial', 'volta à vista do Porto Organizado.')}
+        ${ferr('locate', 'Minha localização', 'mostra onde você está (o navegador pede permissão).')}
+        ${ferr('ruler', 'Medir distância', 'clique nos pontos e dê duplo clique para terminar.')}
+        ${ferr('area', 'Medir área', 'desenhe o contorno e dê duplo clique para terminar; mostra área e perímetro.')}
+        ${ferr('trash', 'Limpar', 'apaga medições e destaques.')}
+        ${ferr('print', 'Imprimir', 'gera uma folha A4 com título, legenda, norte e escala.')}
+        ${ferr('map', 'Mapa de fundo', 'no canto inferior esquerdo: Satélite, Cinza claro ou Ruas.')}
+        ${ferr('moon', 'Tema escuro', 'botão da lua no topo; a escolha fica salva neste navegador.')}
+        <li><span class="sobre-ico">${icone('copy')}</span><span><b>Coordenadas</b> — clique com o botão direito no mapa para ver e copiar as coordenadas do ponto.</span></li>
+      </ul>
+
+      <h3>Pesquisa e painel estatístico</h3>
+      <ul>
+        <li>A aba <b>Pesquisar</b> encontra arrendatários, berços, trechos, armazéns, códigos de área e outros nomes.</li>
+        <li>O <b>Painel estatístico</b> resume os perfis de carga. Clique em uma barra para filtrar o mapa, as tabelas e os outros
+          gráficos; o mapa se aproxima das áreas filtradas. Clique de novo na barra para remover o filtro.</li>
+      </ul>
+
+      <h3>Imprimir e exportar</h3>
+      <ul>
+        <li><b>Impressão:</b> para que a escala numérica fique correta, imprima em A4 paisagem, a 100%, sem "ajustar à página".</li>
+        <li><b>Tabela (CSV):</b> abra a tabela pelo menu ⋯ e clique em CSV. O arquivo abre no Excel.</li>
+        <li><b>Dados geográficos (GeoJSON):</b> baixe pelo menu ⋯. As coordenadas estão em WGS 84 (EPSG:4326).</li>
+        <li><b>Atalhos de teclado:</b> <kbd>Esc</kbd> fecha painéis e cancela medições; <kbd>←</kbd> <kbd>→</kbd> trocam o horizonte quando o seletor está selecionado.</li>
+      </ul>
+
+      <details class="sobre-tecnico">
+        <summary>Informações técnicas e fontes</summary>
+        <ul>
+          <li><b>Sistemas de referência:</b> arquivos de origem em ${[...crs].map(esc).join(', ') || '—'}; exibição em WGS 84.
+            A barra inferior mostra também as coordenadas em SIRGAS 2000 / UTM zona 23S (EPSG:31983).</li>
+          ${limites ? `<li><b>Limites:</b> ${esc(limites.texto)} ${limites.ano ? `Malha de ${esc(limites.ano)}.` : ''}</li>` : ''}
+          ${CFG.basemaps.map((b) => `<li><b>Mapa de fundo ${esc(b.nome)}:</b> ${b.atribuicao}</li>`).join('')}
+        </ul>
+      </details>
+
       <div class="creditos">
         <h3>Créditos</h3>
         <p>Geoportal desenvolvido por Maria Eduarda Almeida de Sousa.</p>
@@ -1811,6 +1943,7 @@
     const arvore = $('#arvore');
     ['click', 'change', 'input'].forEach((t) => arvore.addEventListener(t, aoInteragirArvore));
     $('#filtroCamadas').addEventListener('input', renderArvore);
+    $('#btnOrdemPadrao').addEventListener('click', restaurarOrdemDesenho);
     $('#btnDesligarTodas').addEventListener('click', () => {
       estado.camadas.forEach((rt) => definirVisibilidade(rt, false));
       aposMudarVisibilidade();
@@ -1881,6 +2014,7 @@
     if (estado.iniciado) return;
     estado.iniciado = true;
     criarCamadas();
+    criarPanesCamadas();
     criarPadroes();
     estado.camadas.forEach(atualizarCamada);
 
@@ -1888,7 +2022,7 @@
     let ext = poligonal ? extensaoDe((dadosDe(poligonal) || {}).features) : null;
     if (!ext) ext = extensaoDe(estado.camadas.filter((rt) => rt.visivel).flatMap((rt) => rt.features));
     estado.extensaoInicial = ext;
-    if (ext) map.fitBounds(ext, { paddingTopLeft: [30, 30], paddingBottomRight: [70, 40] });
+    if (ext) map.fitBounds(ext, margensMapa());
 
     renderArvore();
     renderLegenda();
@@ -1896,7 +2030,10 @@
     atualizarStatus(map.getCenter());
 
     const n = estado.camadas.filter((rt) => dadosDe(rt)).length;
-    $('#rodapeContagem').textContent = `${n} de ${estado.camadas.length} camadas com dados`;
+    $('#rodapeContagem').textContent = `${n} camadas disponíveis`;
+    $('#rodapeContagem').title = n < estado.camadas.length
+      ? `${estado.camadas.length - n} camada(s) sem arquivo de dados neste horizonte`
+      : 'Todas as camadas do catálogo têm dados';
 
     const tela = $('#carregando');
     tela.classList.add('sumindo');
