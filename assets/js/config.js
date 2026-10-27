@@ -283,7 +283,7 @@ window.GEOPORTAL_CONFIG = {
       painel: 'pn-poligonal', rotulo: ['Anexo'],
       personalizavel: true,    // cor, opacidade e largura do traço editáveis no menu ⋯
       rotuloZoom: 13,          // zoom mínimo para mostrar rótulos (padrão por grupo em geoportal.js)
-      rotuloPadrao: false,     // nomes dos anexos são longos: rótulos desta camada só se o usuário ligar no menu ⋯
+      rotuloPadrao: false,     // nomes dos anexos são longos e cobririam o mapa: esta camada fica sem rótulos
       identificarPorUltimo: true,
       // Sempre vermelha, com halo branco para destacar em qualquer mapa
       estilo: { cor: '#e52207', espessura: 3, semPreenchimento: true, contorno: { cor: '#ffffff', espessura: 7 } }

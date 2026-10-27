@@ -108,7 +108,6 @@
     filtros: { perfil: new Set(), tipo: new Set() },
     ligadasPeloFiltro: new Set(), // camadas ligadas automaticamente ao aplicar um filtro
     rotulos: armazenamento.ler('rotulos', false),            // rótulos no mapa (padrão: desligados)
-    rotulosCamadas: armazenamento.ler('rotulosCamadas', {}), // { idCamada: true|false } escolha por camada no menu ⋯
     estAberto: false
   };
   const EST = CFG.estatisticas || {};
@@ -827,10 +826,6 @@
             <input type="range" min="0" max="100" step="5" value="${op}" data-acao="opacidade" aria-label="${rotuloOpacidade} de ${esc(rt.cfg.nome)}">
             <output>${op}%</output>
           </div>`}
-          <label class="pers-linha rotulo-opcao">
-            <input type="checkbox" data-acao="rotulo-camada" ${rotuloLigado(rt) ? 'checked' : ''}>
-            <span>Mostrar rótulos desta camada <small>(com "Rótulos" ligado, a partir do zoom ${zoomRotulo(rt)})</small></span>
-          </label>
           <div class="camada-botoes">
             <button type="button" data-acao="ordem-frente" title="Desenhar acima da próxima camada ligada">↑ Para frente</button>
             <button type="button" data-acao="ordem-tras" title="Desenhar abaixo da camada ligada anterior">↓ Para trás</button>
@@ -935,7 +930,8 @@
 
   const zoomRotulo = (rt) => rt.cfg.rotuloZoom ?? ZOOM_ROTULO_GRUPO[rt.cfg.grupo] ?? 14;
   // Escolha do usuário no menu ⋯; sem escolha, vale "rotuloPadrao" do config.js (padrão: ligado)
-  const rotuloLigado = (rt) => estado.rotulosCamadas[rt.cfg.id] ?? (rt.cfg.rotuloPadrao !== false);
+  // O botão "T" liga os rótulos de todas as camadas; só as marcadas com rotuloPadrao: false no config.js ficam sem nomes
+  const rotuloLigado = (rt) => rt.cfg.rotuloPadrao !== false;
 
   function areaAnel(anel) {
     let a = 0;
@@ -1106,11 +1102,6 @@
       if (acao === 'camada-chk' && rt) {
         definirVisibilidade(rt, alvo.checked);
         aposMudarVisibilidade();
-      } else if (acao === 'rotulo-camada' && rt) {
-        estado.rotulosCamadas[rt.cfg.id] = alvo.checked;
-        armazenamento.gravar('rotulosCamadas', estado.rotulosCamadas);
-        desenharRotulos();
-        if (alvo.checked && !estado.rotulos) aviso('Ligue o botão "Rótulos" na barra de ferramentas para ver os nomes no mapa.', 3600);
       } else if (acao === 'grupo-chk' && elGrupo) {
         const ligar = alvo.dataset.estado !== 'todos';
         $$('.camada', elGrupo).forEach((el) => {
@@ -3038,7 +3029,7 @@
         ${ferr('ruler', 'Medir distância', 'clique nos pontos e dê duplo clique para terminar.')}
         ${ferr('area', 'Medir área', 'desenhe o contorno e dê duplo clique para terminar; mostra área e perímetro.')}
         ${ferr('trash', 'Limpar', 'apaga medições e destaques.')}
-        ${ferr('rotulo', 'Rótulos', 'mostra os nomes das áreas no mapa ao aproximar. No menu ⋯ você escolhe quais camadas mostram nomes.')}
+        ${ferr('rotulo', 'Rótulos', 'liga ou desliga os nomes das áreas de todas as camadas ligadas; eles aparecem conforme você aproxima o mapa.')}
         ${ferr('upload', 'Minha área', 'abre a aba "Minha área", explicada abaixo.')}
         ${ferr('compare', 'Comparar horizontes', 'divide o mapa em dois: à esquerda o horizonte escolhido no topo, à direita o escolhido na barra de comparação. Arraste a divisória (ou use as setas do teclado) para ver o que muda. Esc encerra.')}
         ${ferr('link', 'Copiar link', 'copia o endereço desta vista (horizonte, camadas ligadas, mapa de fundo e posição) para enviar a outra pessoa.')}

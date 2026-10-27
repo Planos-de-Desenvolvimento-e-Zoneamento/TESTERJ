@@ -29,7 +29,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-  <link rel="stylesheet" href="assets/css/geoportal.css?v=fb03012793">
+  <link rel="stylesheet" href="assets/css/geoportal.css?v=6bfa9fc3df">
 </head>
 <body>
 <noscript>
@@ -166,7 +166,9 @@
                 (selecione os quatro na pasta › botão direito › <i>Compactar</i>).
                 <span class="area-atencao">Não envie só o .shp. Sem o <b>.prj</b> o geoportal não sabe em que sistema de
                   coordenadas a área foi desenhada, e ela pode aparecer em outro lugar.</span></li>
-              <li><b>GeoJSON, KML ou KMZ:</b> pode enviar direto. Do Google Earth: botão direito no lugar › <i>Salvar lugar como</i> (KMZ).</li>
+              <li><b>KML ou KMZ:</b> pode enviar direto. Esses formatos usam sempre latitude e longitude em WGS 84
+                (o padrão do Google Earth); ao exportar do QGIS, ele converte sozinho. Do Google Earth: botão direito no lugar › <i>Salvar lugar como</i>.</li>
+              <li><b>GeoJSON:</b> pode enviar direto; de preferência em EPSG:4326.</li>
               <li><b>Opção mais segura (QGIS):</b> botão direito na camada › <i>Exportar › Salvar feições como</i>,
                 formato <b>GeoJSON</b> e SRC <b>EPSG:4326 – WGS 84</b>.</li>
               <li>Depois de enviar, <b>confira no mapa</b> se a área ficou no lugar certo.</li>
@@ -403,9 +405,9 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
-<script src="assets/js/config.js?v=11e71e830f"></script>
-<script src="assets/js/dados/indice.js?v=8e45a6c4ad"></script>
+<script src="assets/js/config.js?v=acb1e5463a"></script>
+<script src="assets/js/dados/indice.js?v=53406161ba"></script>
 <script src="assets/js/leitor-geo.js?v=4ecf9da512"></script>
-<script src="assets/js/geoportal.js?v=3813f6c346"></script>
+<script src="assets/js/geoportal.js?v=758f6f9ae5"></script>
 </body>
 </html>

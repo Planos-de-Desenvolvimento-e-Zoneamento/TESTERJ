@@ -301,9 +301,6 @@ body.painel-oculto .painel { margin-left: calc(-1 * var(--painel-w)); }
 .pers-linha span { min-width: 66px; }
 .pers input[type="color"] { width: 44px; height: 30px; padding: 2px; border: 1px solid var(--borda-forte); border-radius: 6px; background: var(--campo); cursor: pointer; }
 .pers .link { align-self: flex-start; }
-.rotulo-opcao { margin-top: 8px; align-items: flex-start; cursor: pointer; }
-.rotulo-opcao input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--azul); flex: none; }
-.rotulo-opcao small { display: block; font-size: 12px; color: var(--texto-3); }
 
 /* ---------------------------------------------------------------- Legenda flutuante */
 .legenda-flutuante {
@@ -397,7 +394,11 @@ body.tabela-aberta .legenda-flutuante, body.tabela-aberta .legenda-reabrir { dis
 .area-arquivo > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .area-arquivo b { font-size: 14px; color: var(--titulo); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .area-arquivo span { font-size: 12.5px; color: var(--texto-3); }
-.area-alerta { margin: 8px 0 0; padding: 7px 10px; border-radius: var(--raio); background: #fff8e1; border: 1px solid #f2d27a; color: #3d3000; font-size: 13px; text-shadow: none; }
+/* Arquivo faltando ou com problema: vermelho (contraste AA no tema claro e no escuro) */
+.area-alerta {
+  margin: 8px 0 0; padding: 7px 10px; border-radius: var(--raio); font-size: 13px; text-shadow: none;
+  background: #fde8e6; border: 1px solid #f3b8ae; border-left: 4px solid #c41a05; color: #7a1405;
+}
 .area-destaque { margin: 12px 0 0; padding: 12px 14px; border-radius: 10px; border-left: 5px solid var(--azul); background: var(--vidro-item); }
 .area-destaque.dentro { border-left-color: var(--vermelho); }
 .area-destaque.parcial { border-left-color: #e0a800; }
@@ -827,8 +828,9 @@ body.info-aberta .tabela { right: calc(var(--margem-ferr) + 376px); }
 .sobre-aviso p { margin: 0; }
 .sobre-aviso .sobre-data { margin-top: 6px; font-size: 13px; }
 :root[data-tema="escuro"] .sobre-aviso { background: #2b2410; border-color: #6b5410; color: #f3e3b0; }
-:root[data-tema="escuro"] .area-alerta, :root[data-tema="escuro"] .area-atencao { background: #2b2410; border-color: #6b5410; color: #f3e3b0; }
-:root[data-tema="escuro"] .area-status.erro { background: #3a1410; border-color: #6b2318; color: #ffb4a8; }
+:root[data-tema="escuro"] .area-atencao { background: #2b2410; border-color: #6b5410; color: #f3e3b0; }
+:root[data-tema="escuro"] .area-alerta { background: #3a1410; border-color: #7a2a1d; border-left-color: #ff6b57; color: #ffc4b8; }
+:root[data-tema="escuro"] .area-status.erro { background: #3a1410; border-color: #7a2a1d; color: #ffc4b8; }
 :root[data-tema="escuro"] .sit-dentro { background: #3a1410; color: #ffb4a8; }
 :root[data-tema="escuro"] .sit-parcial { background: #33240a; color: #fcd34d; }
 :root[data-tema="escuro"] .sit-fora { background: #1c2f52; color: #cfe0ff; }
