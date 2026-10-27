@@ -35,10 +35,12 @@ window.GEOPORTAL_CONFIG = {
   subtitulo: 'Zoneamento, infraestrutura e acessos portuários',
   orgao: { linha1: 'Ministério de', linha2: 'Portos e Aeroportos' },
   opacidadePadrao: OPACIDADE_PADRAO,
-  dataAtualizacao: '19/10/2026', // exibida no "Sobre"
+  dataAtualizacao: '27/10/2026', // exibida no "Sobre"
+  // Versão do plano exibida no "Sobre". Vazio: não aparece.
+  versaoPlano: 'PDZ do Porto do Rio de Janeiro aprovado pela Portaria MPOR nº 88, de 24 de fevereiro de 2026',
   linkPdz: 'https://www.gov.br/portos-e-aeroportos/pt-br/assuntos/transporte-aquaviario/planejamento-portuario/plano-de-desenvolvimento-e-zoneamento-pdz',
 
-  // Fontes exibidas no "Sobre"
+  // Fontes exibidas no "Sobre". As camadas do porto vêm da base georreferenciada do PDZ (site em linkPdz).
   fontes: {
     limites: {
       texto: 'Municípios e Unidades da Federação: IBGE — Malha Territorial.',
@@ -280,6 +282,8 @@ window.GEOPORTAL_CONFIG = {
       arquivo: 'Poligonal da Área do Porto Organizado do Rio de Janeiro',
       painel: 'pn-poligonal', rotulo: ['Anexo'],
       personalizavel: true,    // cor, opacidade e largura do traço editáveis no menu ⋯
+      rotuloZoom: 13,          // zoom mínimo para mostrar rótulos (padrão por grupo em geoportal.js)
+      rotuloPadrao: false,     // nomes dos anexos são longos: rótulos desta camada só se o usuário ligar no menu ⋯
       identificarPorUltimo: true,
       // Sempre vermelha, com halo branco para destacar em qualquer mapa
       estilo: { cor: '#e52207', espessura: 3, semPreenchimento: true, contorno: { cor: '#ffffff', espessura: 7 } }
@@ -296,7 +300,7 @@ window.GEOPORTAL_CONFIG = {
       id: 'uf', grupo: 'ref', tipo: 'poligono',
       nome: 'Unidades da Federação',
       arquivo: 'UF BR JSON',
-      painel: 'pn-limites', rotulo: ['Unidade da Federação', 'Sigla da UF'], semTooltip: true,
+      painel: 'pn-limites', rotulo: ['Unidade da Federação', 'Sigla da UF'], semTooltip: true, rotuloZoom: 5,
       estilo: { cor: '#0f172a', preenchimento: '#cbd5e1', tracoProprio: true, espessura: 3, opacidadePreenchimento: OPACIDADE_PADRAO, contorno: { cor: '#ffffff', espessura: 7 } }
     }
   ]
